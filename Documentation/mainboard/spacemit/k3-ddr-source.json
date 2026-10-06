@@ -1,0 +1,47 @@
+{
+  "source_repository": "https://github.com/openRuyi-Project/u-boot.git",
+  "source_revision": "e4043c70d6e921238fe43e485f1efc71b30b00d0",
+  "source_root": "drivers/ddr/spacemit/k3",
+  "source_files_sha256": {
+    "lpddr4x_init.c": "abf932bd430fc24dda8398466f645e46812e018f808ff9559ed96aa8bd743b99",
+    "lpddr4x_pre_training_table.c": "945b05cc6a2253bd1f837ff7c195442610efff86c1f993ff1b2996f081a8072a",
+    "lpddr4x_quickboot_table.c": "9ccf382f555e899f3040f3cd6e2e045fb4bfd9441bc3d05ac3b9140f2da2277b",
+    "lpddr4x_training_table.c": "1ecb66936fd017f70820a37d44986cf282ea317df81d6b6f6484db14c244e5b5",
+    "lpddr5_init.c": "53b83e95bfeba951370ea7c15973f530cdb832aaa42fd4202dddd4690e1ca2ac",
+    "lpddr5_pre_training_table.c": "5d720ed0b6243dac944d4c14bf2112867a2d4d02eefb71f30f37798bd1603237",
+    "lpddr5_quickboot_table.c": "ad82abe8feb37e3e01220694cee5aed54699011a393232b11df264c15c9c417f",
+    "lpddr5_training_table.c": "5b6d76baf4babc0c2c8c02431fc7559a4579a988d53a5f9deff938dd1412b86e",
+    "lpddr_msg_block.h": "d43b8b6fd7bb8982dbdc8ee28811bde05dd62001469905863d7fa2260d6abc63",
+    "lpddr_quick_boot.c": "86beef8d655c7703415d2cd5965bf2092c52cee94185389e3e2bde50152f8ca9",
+    "lpddr_training_result.c": "b38e45273b4d2c0a0e1ea617d3690f244d4872b7a0e336f8b8b42688e90151c9",
+    "k3_ddr.h": "2a94a14f08f9033ad965031fad633085107dd21a2b272a831d40ad28cd9f584b",
+    "ddr_init.c": "58d7e3edc40cb41931e1560b6b2b35e90df42c68051278443fd72422711a2689"
+  },
+  "unchanged_training_sources": [
+    "lpddr4x_init.c",
+    "lpddr4x_pre_training_table.c",
+    "lpddr4x_quickboot_table.c",
+    "lpddr4x_training_table.c",
+    "lpddr5_init.c",
+    "lpddr5_pre_training_table.c",
+    "lpddr5_quickboot_table.c",
+    "lpddr5_training_table.c",
+    "lpddr_msg_block.h",
+    "lpddr_quick_boot.c",
+    "lpddr_training_result.c"
+  ],
+  "platform_adaptations": {
+    "k3_ddr.h": "coreboot compatibility include and missing function declarations",
+    "ddr_init.c": "coreboot entry, board EEPROM buffer and default part, controller addresses, timer and capacity return",
+    "coreboot.h": "coreboot APIs, original training record layout, IEEE CRC-32 and LZO access helpers"
+  },
+  "training_firmware": "original LZOP arrays, decompressed at runtime into audio SRAM at 0xc08d0000",
+  "quickboot_imported": true,
+  "LPDDR4X_imported": true,
+  "hardware_tested": false,
+  "support_source_files_sha256": {
+    "lib/lzo/lzo1x_decompress.c": "7c5707ff1f3b6f07b7050d917cc58bce3d36371da9db5f898b4b823112b2a348",
+    "lib/lzo/lzodefs.h": "8d586d3bd36be2a6b34ae9debf5c67b2cb4708f90aa3afe9e3d4cb3a45a8ecbd",
+    "include/linux/lzo.h": "10c69c70f20cd5b13c3ba29b8d740e7a2ddd8de735d5d2125953d04633715822"
+  }
+}
