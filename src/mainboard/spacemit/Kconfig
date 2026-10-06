@@ -1,0 +1,10 @@
+## SPDX-License-Identifier: GPL-2.0-only
+if VENDOR_SPACEMIT
+choice
+	prompt "Mainboard model"
+source "src/mainboard/spacemit/*/Kconfig.name"
+endchoice
+source "src/mainboard/spacemit/*/Kconfig"
+config MAINBOARD_VENDOR
+	default "SpacemiT"
+endif

@@ -1,0 +1,3 @@
+## SPDX-License-Identifier: GPL-2.0-only
+config BOARD_SPACEMIT_K3_PICO_ITX
+	bool "K3 Pico ITX"

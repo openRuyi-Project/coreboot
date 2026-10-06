@@ -439,6 +439,14 @@ Oryx Pro 11 <system76/oryp11.md>
 Serval Workstation 13 <system76/serw13.md>
 ```
 
+## SpacemiT
+
+```{toctree}
+:maxdepth: 1
+
+K3 Pico ITX <spacemit/k3-pico-itx.md>
+```
+
 ## Texas Instruments
 
 ```{toctree}
