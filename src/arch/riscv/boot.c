@@ -73,6 +73,11 @@ static void do_arch_prog_run(struct arch_prog_run_args *args)
 	struct prog *prog = args->prog;
 	void *fdt = HLS()->fdt;
 
+	/* Each executing hart must see instructions copied or decompressed by
+	 * the loader, including when instruction caches are already enabled.
+	 */
+	asm volatile("fence.i" ::: "memory");
+
 	if (prog_cbfs_type(prog) == CBFS_TYPE_FIT_PAYLOAD)
 		fdt = prog_entry_arg(prog);
 
