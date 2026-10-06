@@ -73,6 +73,7 @@ void bootblock_main_with_basetime(uint64_t base_timestamp)
 	bootblock_main_with_timestamp(base_timestamp, NULL, 0);
 }
 
+#if !CONFIG(BOOTBLOCK_CUSTOM)
 void main(void)
 {
 	uint64_t base_timestamp = 0;
@@ -84,6 +85,8 @@ void main(void)
 
 	bootblock_main_with_timestamp(base_timestamp, NULL, 0);
 }
+
+#endif
 
 #if CONFIG(COMPRESS_BOOTBLOCK)
 /*
