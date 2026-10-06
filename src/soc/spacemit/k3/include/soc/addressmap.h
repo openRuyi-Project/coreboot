@@ -1,0 +1,20 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+#ifndef SOC_SPACEMIT_K3_ADDRESSMAP_H
+#define SOC_SPACEMIT_K3_ADDRESSMAP_H
+#define K3_DRAM_BASE 0x100000000
+#define K3_UART0_BASE 0xd4017000
+#define K3_CLINT_BASE 0xf1810000
+#define K3_TIMEBASE_HZ 24000000
+#define K3_MPMU_BASE 0xd4050000
+#define K3_APMU_BASE 0xd4282800
+#define K3_APBS_BASE 0xd4090000
+#define K3_MFPR_BASE 0xd401e000
+#define K3_IO_POWER_BASE 0xd401e800
+#define K3_IO_POWER_KEY 0xd4015050
+#define K3_IO_POWER_GPIO4 0x20
+#define K3_ESPI_BASE 0xcac8c000
+#define K3_QSPI_BASE 0xd420c000
+#define K3_QSPI_WINDOW 0xb8000000
+/* Keep the OpenSBI load window outside coreboot allocations. */
+#define K3_FIRMWARE_RESERVED_SIZE (2 * MiB)
+#endif
