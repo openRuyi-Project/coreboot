@@ -76,6 +76,13 @@ config EC_GOOGLE_CHROMEEC_ESPI
 	  this option simply enables the LPC EC code.  The eSPI device
 	  still needs to correctly configure the bus transactions.
 
+config EC_GOOGLE_CHROMEEC_MMIO
+	bool
+	default n
+	help
+	  Chrome EC protocol v3 through platform-provided byte-addressable
+	  command and packet windows. The platform owns bus initialization.
+
 config EC_GOOGLE_CHROMEEC_MEMMAP_INDEXED_IO
 	depends on EC_GOOGLE_CHROMEEC && ARCH_X86
 	def_bool n

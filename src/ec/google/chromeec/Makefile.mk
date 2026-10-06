@@ -24,6 +24,9 @@ bootblock-y += ec.c
 bootblock-$(CONFIG_EC_GOOGLE_CHROMEEC_I2C) += ec_i2c.c
 bootblock-$(CONFIG_EC_GOOGLE_CHROMEEC_LPC) += ec_lpc.c
 bootblock-$(CONFIG_EC_GOOGLE_CHROMEEC_SPI) += ec_spi.c
+bootblock-$(CONFIG_EC_GOOGLE_CHROMEEC_MMIO) += ec_mmio.c crosec_proto.c
+romstage-$(CONFIG_EC_GOOGLE_CHROMEEC_MMIO) += ec_mmio.c
+ramstage-$(CONFIG_EC_GOOGLE_CHROMEEC_MMIO) += ec_mmio.c
 ifeq ($(CONFIG_EC_GOOGLE_CHROMEEC_SPI)$(CONFIG_EC_GOOGLE_CHROMEEC_I2C),y)
 bootblock-y += crosec_proto.c
 endif
