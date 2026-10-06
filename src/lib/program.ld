@@ -67,6 +67,8 @@
 	. = ALIGN(ARCH_POINTER_ALIGN_SIZE);
 	*(.rodata);
 	*(.rodata.*);
+	*(.srodata);
+	*(.srodata.*);
 	*(.lrodata);
 	*(.lrodata.*);
 	. = ALIGN(ARCH_POINTER_ALIGN_SIZE);
