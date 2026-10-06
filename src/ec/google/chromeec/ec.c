@@ -1074,8 +1074,8 @@ bool google_chromeec_get_ap_watchdog_flag(void)
 	return false;
 }
 
-int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
-			     uint8_t *buffer, int len, int is_read)
+int google_chromeec_i2c_xfer_on_bus(uint8_t bus, uint8_t chip, uint8_t addr,
+				   int alen, uint8_t *buffer, int len, int is_read)
 {
 	union {
 		struct ec_params_i2c_passthru p;
@@ -1094,7 +1094,10 @@ int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
 	int size;
 	int rv;
 
-	p->port = 0;
+	p->port = bus;
+
+	if (len < 0 || len > EC_HOST_PARAM_SIZE || (!buffer && len) || (is_read && !len))
+		return -1;
 
 	if (alen != 1) {
 		printk(BIOS_ERR, "Unsupported address length %d\n", alen);
@@ -1125,7 +1128,7 @@ int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
 	msg->addr_flags = chip;
 	msg->len = write_len;
 	pdata[0] = addr;
-	if (!is_read)
+	if (!is_read && len)
 		memcpy(pdata + 1, buffer, len);
 	msg++;
 
@@ -1146,14 +1149,14 @@ int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
 		return rv;
 
 	/* Parse response */
-	if (r->i2c_status & EC_I2C_STATUS_ERROR) {
-		printk(BIOS_ERR, "Transfer failed with status=0x%x\n",
-		       r->i2c_status);
+	if (cmd.cmd_size_out < sizeof(*r) + read_len || r->num_msgs != p->num_msgs) {
+		printk(BIOS_ERR, "Truncated I2C response\n");
 		return -1;
 	}
 
-	if (cmd.cmd_size_out < sizeof(*r) + read_len) {
-		printk(BIOS_ERR, "Truncated read response\n");
+	if (r->i2c_status & EC_I2C_STATUS_ERROR) {
+		printk(BIOS_ERR, "Transfer failed with status=0x%x\n",
+		       r->i2c_status);
 		return -1;
 	}
 
@@ -1161,6 +1164,13 @@ int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
 		memcpy(buffer, r->data, read_len);
 
 	return 0;
+}
+
+int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
+			     uint8_t *buffer, int len, int is_read)
+{
+	return google_chromeec_i2c_xfer_on_bus(0, chip, addr, alen,
+					     buffer, len, is_read);
 }
 
 int google_chromeec_set_sci_mask(uint64_t mask)

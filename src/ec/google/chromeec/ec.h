@@ -14,6 +14,8 @@
 /* Fill in base and size of the IO port resources used. */
 void google_chromeec_ioport_range(uint16_t *base, size_t *size);
 
+int google_chromeec_i2c_xfer_on_bus(uint8_t bus, uint8_t chip, uint8_t addr,
+				   int alen, uint8_t *buffer, int len, int is_read);
 int google_chromeec_i2c_xfer(uint8_t chip, uint8_t addr, int alen,
 			     uint8_t *buffer, int len, int is_read);
 uint64_t google_chromeec_get_wake_mask(void);
