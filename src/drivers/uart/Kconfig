@@ -53,6 +53,14 @@ config DRIVERS_UART_8250MEM_32
 	default n
 	select DRIVERS_UART_8250MEM
 
+config DRIVERS_UART_8250MEM_UUE
+	bool
+	default n
+	depends on DRIVERS_UART_8250MEM
+	help
+	  The UART requires Interrupt Enable Register bit 6 (Unit Enable)
+	  for polled transfers. Keep this bit set while disabling interrupts.
+
 config HAVE_UART_SPECIAL
 	bool
 	default n

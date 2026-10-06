@@ -11,6 +11,7 @@
 
 /* Control */
 #define UART8250_IER 0x01
+#define   UART8250_IER_UUE	BIT(6) /* UART Unit Enable */
 #define   UART8250_IER_MSI	BIT(3) /* Enable Modem status interrupt */
 #define   UART8250_IER_RLSI	BIT(2) /* Enable receiver line status interrupt */
 #define   UART8250_IER_THRI	BIT(1) /* Enable Transmitter holding register int. */

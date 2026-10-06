@@ -79,8 +79,9 @@ static unsigned char uart8250_mem_rx_byte(void *base)
 
 static void uart8250_mem_init(void *base, unsigned int divisor)
 {
-	/* Disable interrupts */
-	uart8250_write(base, UART8250_IER, 0x0);
+	/* Disable interrupts, retaining unit enable on UARTs that require it. */
+	uart8250_write(base, UART8250_IER,
+		CONFIG(DRIVERS_UART_8250MEM_UUE) ? UART8250_IER_UUE : 0);
 	/* Enable FIFOs */
 	uart8250_write(base, UART8250_FCR, UART8250_FCR_FIFO_EN);
 
