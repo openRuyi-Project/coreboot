@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config SOC_SPACEMIT_K3
+	bool
+	select ARCH_RISCV_RV64
+	select ARCH_RISCV_S
+	select ARCH_RISCV_U
+	select ARCH_RISCV_PMP
+	select ARCH_BOOTBLOCK_RISCV
+	select ARCH_VERSTAGE_RISCV
+	select ARCH_ROMSTAGE_RISCV
+	select ARCH_RAMSTAGE_RISCV
+	select DRIVERS_UART_8250MEM_32
+	select DRIVERS_UART_8250MEM_UUE
+	select UART_OVERRIDE_REFCLK
+	select RISCV_HAS_OPENSBI
+
+if SOC_SPACEMIT_K3
+
+config SPACEMIT_K3_BOOTROM
+	bool
+	select SPACEMIT_K3_EARLY_ESPI
+
+config SPACEMIT_K3_DDR
+	bool
+
+config SPACEMIT_K3_NATIVE_BOOT
+	def_bool y
+	select SPACEMIT_K3_BOOTROM
+	select SPACEMIT_K3_DDR
+	select SPACEMIT_K3_QSPI
+	select CBFS_VERIFICATION
+	help
+	  Initialize cooling and DDR, stage the normal firmware from NOR or
+	  USB Fastboot into DRAM, then use standard coreboot payload loading.
+
+config SPACEMIT_K3_QSPI
+	bool "K3 QSPI read-only SPI controller"
+	default n
+	select SPI_FLASH
+	select SPI_FLASH_NO_FAST_READ
+	help
+	  Use polled IP FIFO reads on CS0 through the standard SPI interface.
+	  Board code must configure pads and the clock/reset sequence first.
+
+config SPACEMIT_K3_EARLY_ESPI
+	bool "K3 early eSPI Chrome EC transport"
+	default n
+	select EC_GOOGLE_CHROMEEC
+	select EC_GOOGLE_CHROMEEC_MMIO
+	help
+	  Build the early eSPI and Chrome EC cooling path. Board code must
+	  supply clock, reset and pinmux initialization before using it.
+
+config SEPARATE_ROMSTAGE
+	default n
+config MAX_CPUS
+	default 1
+config RISCV_ARCH
+	default "rv64imafdc"
+config RISCV_ABI
+	default "lp64d"
+config RISCV_CODEMODEL
+	default "medany"
+config RISCV_WORKING_HARTID
+	default 0
+config OPENSBI_PLATFORM
+	default "generic"
+config OPENSBI_TEXT_START
+	default 0x100000000
+config RISCV_OPENSBI
+	default y
+
+endif
