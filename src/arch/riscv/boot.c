@@ -94,6 +94,7 @@ static void do_arch_prog_run(struct arch_prog_run_args *args)
 void arch_prog_run(struct prog *prog)
 {
 	struct arch_prog_run_args args = {};
+	struct prog sbi = PROG_INIT(PROG_OPENSBI, CONFIG_CBFS_PREFIX"/opensbi");
 
 	args.prog = prog;
 
@@ -113,8 +114,6 @@ void arch_prog_run(struct prog *prog)
 
 		/* In case of OpenSBI we have to load it before resuming all HARTs */
 		if (CONFIG(RISCV_OPENSBI)) {
-			struct prog sbi = PROG_INIT(PROG_OPENSBI, CONFIG_CBFS_PREFIX"/opensbi");
-
 			if (!selfload_check(&sbi, BM_MEM_OPENSBI))
 				die("OpenSBI load failed");
 
