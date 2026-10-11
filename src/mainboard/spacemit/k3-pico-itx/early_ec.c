@@ -5,6 +5,8 @@
 #include <device/mmio.h>
 #include <soc/addressmap.h>
 #include <soc/espi.h>
+#include <console/console.h>
+#include <string.h>
 
 int pico_itx_early_cooling_init(void)
 {
@@ -53,4 +55,53 @@ int pico_itx_request_full_fan(void)
 		return -1;
 	}
 	return google_chromeec_command(&request);
+}
+
+int pico_itx_enable_usb_hub(void)
+{
+	/* The board's EC GPIO8 switches the FE1.1S hub's 3.3 V supply.
+	 * Resolve and check its name before using the EC's name-based SET.
+	 */
+	struct ec_params_gpio_get_v1 get = {
+		.subcmd = EC_GPIO_GET_INFO,
+		.get_info.index = 8,
+	};
+	struct ec_response_gpio_get_v1 info = {0};
+	struct chromeec_command command = {
+		.cmd_code = EC_CMD_GPIO_GET,
+		.cmd_version = 1,
+		.cmd_data_in = &get,
+		.cmd_size_in = sizeof(get),
+		.cmd_data_out = &info,
+		.cmd_size_out = sizeof(info),
+	};
+	if (google_chromeec_command(&command) ||
+	    !(info.get_info.flags & (1U << 9)) ||
+	    memcmp(info.get_info.name, "EC_SW_USB2_PWREN1", sizeof("EC_SW_USB2_PWREN1")))
+		return -1;
+	if (info.get_info.val)
+		return 0;
+	struct ec_params_gpio_set set = { .val = 1 };
+	memcpy(set.name, info.get_info.name, sizeof(set.name));
+	command = (struct chromeec_command) {
+		.cmd_code = EC_CMD_GPIO_SET,
+		.cmd_data_in = &set,
+		.cmd_size_in = sizeof(set),
+	};
+	if (google_chromeec_command(&command))
+		return -1;
+	struct ec_params_gpio_get verify;
+	struct ec_response_gpio_get response;
+	memcpy(verify.name, set.name, sizeof(verify.name));
+	command = (struct chromeec_command) {
+		.cmd_code = EC_CMD_GPIO_GET,
+		.cmd_data_in = &verify,
+		.cmd_size_in = sizeof(verify),
+		.cmd_data_out = &response,
+		.cmd_size_out = sizeof(response),
+	};
+	if (google_chromeec_command(&command) || !response.val)
+		return -1;
+	printk(BIOS_DEBUG, "K3 USB2 hub: EC 3.3 V supply enabled\n");
+	return 0;
 }

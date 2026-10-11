@@ -4,6 +4,7 @@
 #include <stdint.h>
 int pico_itx_request_full_fan(void);
 int pico_itx_early_cooling_init(void);
+int pico_itx_enable_usb_hub(void);
 void pico_itx_typec_retimer_init(void);
 uint64_t pico_itx_ddr_init(void);
 #endif

@@ -3,6 +3,7 @@
 #include <commonlib/endian.h>
 #include <console/console.h>
 #include <device/i2c_simple.h>
+#include <mainboard/early_ec.h>
 #include <mainboard/power.h>
 #include <soc/cpu_clock.h>
 #include <string.h>
@@ -32,11 +33,13 @@ enum cpu_regulator {
 };
 
 static enum cpu_regulator cpu_regulator;
+static bool ec_usb_hub;
 
 void pico_itx_parse_power_config(const uint8_t *eeprom, size_t size)
 {
 	/* Older DEB1 records omit PMIC Type and use the MPQ regulator. */
 	cpu_regulator = CPU_REGULATOR_MPQ8645P;
+	ec_usb_hub = false;
 	if (!eeprom || size < 11 || memcmp(eeprom, "TlvInfo\0", 8) || eeprom[8] != 1)
 		return;
 	size_t end = 11 + read_be16(eeprom + 9);
@@ -54,6 +57,9 @@ void pico_itx_parse_power_config(const uint8_t *eeprom, size_t size)
 		size_t len = eeprom[pos + 1];
 		if (!eeprom[pos] || eeprom[pos] == 0xff || pos + 2 + len > end - 6)
 			return;
+		if (eeprom[pos] == 0x21 && len == 11 &&
+		    !memcmp(eeprom + pos + 2, "k3-pico-itx", len))
+			ec_usb_hub = true;
 		if (eeprom[pos] != 0x80)
 			continue;
 		const uint8_t *name = eeprom + pos + 2;
@@ -202,6 +208,8 @@ int pico_itx_power_init(void)
 		printk(BIOS_ERR, "K3 AU4562: A100 voltage setup failed\n");
 		return -1;
 	}
+	if (ec_usb_hub && pico_itx_enable_usb_hub())
+		printk(BIOS_ERR, "K3 USB2 hub: EC power enable failed\n");
 	return 0;
 }
 

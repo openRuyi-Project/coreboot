@@ -59,6 +59,14 @@ payload handoff. These are the board's boot-on rails. Their voltage
 selectors are preserved, ALDO3 remains untouched, and external supply
 shutdown on standby is disabled without changing unrelated controls.
 
+Pico ITX identifies itself through EEPROM Product Name (TLV 0x21).
+For this board, coreboot checks EC GPIO8 (`EC_SW_USB2_PWREN1`) and enables
+the FE1.1S USB2 hub's 3.3 V supply if it is off. The EC reports the pin's
+name and direction before a name-based GPIO command is issued. Readback
+must confirm the enable, and an already powered hub is not cycled.
+DEB1 does not use this board-specific operation. Firmware retains hub
+power at OS handoff; this does not add Linux control of the EC GPIO.
+
 ## DDR source provenance
 
 The controller/PHY training sources, register tables and compressed firmware
