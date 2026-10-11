@@ -7,6 +7,7 @@
 #include <string.h>
 #include <mainboard/flash.h>
 #include <mainboard/early_ec.h>
+#include <mainboard/power.h>
 
 uint64_t pico_itx_ddr_init(void)
 {
@@ -31,6 +32,7 @@ uint64_t pico_itx_ddr_init(void)
 	/* Same fallback part-number as the original Pico ITX SPL device tree. */
 	uint64_t size = k3_dram_initialize("MT62F2G32D4DS", ret ? NULL : eeprom,
 					ret ? 0 : sizeof(eeprom));
+	pico_itx_parse_power_config(ret ? NULL : eeprom, ret ? 0 : sizeof(eeprom));
 	printk(BIOS_INFO, "K3 native coreboot: DDR checkpoint complete, %llu MiB configured\n",
 	       size / MiB);
 	return size;

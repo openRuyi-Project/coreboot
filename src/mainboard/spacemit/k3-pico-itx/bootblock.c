@@ -3,6 +3,7 @@
 #include <console/console.h>
 #include <mainboard/early_ec.h>
 #include <mainboard/native_boot.h>
+#include <mainboard/power.h>
 #include <soc/cpu_clock.h>
 #include <soc/power_domains.h>
 #include <soc/system_clock.h>
@@ -16,6 +17,8 @@ void bootblock_mainboard_init(void)
 	uint64_t trained_bytes = pico_itx_ddr_init();
 	if (k3_system_clock_init())
 		die("K3 system clock initialization failed\n");
+	if (pico_itx_power_init())
+		die("K3 board power initialization failed\n");
 	k3_x100_init();
 	if (k3_power_domain_set(K3_PMDOMAIN_AUDIO, true))
 		die("K3 AUDIO power domain failed to start\n");

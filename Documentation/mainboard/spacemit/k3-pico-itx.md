@@ -44,6 +44,21 @@ Coreboot reserves the 2 MiB OpenSBI load window. Each X100 cluster uses
 its own PLL at 2.4 GHz: PLL3 for cluster 0 and PLL4 for cluster 1. Both
 clusters fall back to PLL1 / 3 if the operating point cannot be set.
 
+The board selects the CPU regulator from CRC-validated EEPROM PMIC Type
+(TLV 0x80). Pico ITX uses AU4562 on TWSI8 address 0x75: page 1 supplies
+X100, with a 5 mV VOUT_COMMAND step. The CPU startup requests 1.0 V and
+verifies the command before changing PLLs. Page 0 supplies A100 and is
+initialized to 950 mV before the hart startup handoff. The previous page
+selection is restored after access.
+Records without PMIC Type retain the MPQ identity-checked path used on
+DEB1; the `mpq8655` TLV name selects that path. Other declared regulator
+types cannot enable the maximum CPU operating point.
+
+The common P1 PMIC enables BUCK1..6, ALDO1/2/4 and DLDO1..7 before
+payload handoff. These are the board's boot-on rails. Their voltage
+selectors are preserved, ALDO3 remains untouched, and external supply
+shutdown on standby is disabled without changing unrelated controls.
+
 ## DDR source provenance
 
 The controller/PHY training sources, register tables and compressed firmware
@@ -79,13 +94,19 @@ implement storage writes; the shared EDK2 Fastboot application owns them.
 
 ## Validation limits
 
-On the original 16 GiB LPDDR5 board, restored cold training, EEPROM part
-selection, the memory pattern check, USB image loading, standard CBFS
-handoff and automatic RAM Fastboot have passed. DP/GOP and the Fastboot
-ready screen pass when the capture receiver is active before boot.
-Late receiver connection does not trigger a new DP training attempt.
+The 16 GiB LPDDR5 validation board is DEB1. Cold training, persistent
+quickboot, firmware updates preserving NV, USB image loading, standard
+CBFS handoff and automatic RAM Fastboot have passed there. DP/GOP and the
+Fastboot ready screen pass when the capture receiver is active before
+boot. Late receiver connection does not trigger a new DP training attempt.
 
-The newly failing board, LPDDR4X populations and persistent quickboot
-still require hardware validation. RAM recovery leaves the training record
-erased and uses emulated variables. Keep the SPI offsets and UEFI variable
-reservation when packaging an image.
+On 32 GiB Pico ITX, EEPROM identification, cold training, the original
+memory pattern check, AU4562 command readback, both X100 clusters at
+2.4 GHz and RAM Fastboot have passed. HSM start/stop and shared-data
+checks passed twice on harts 1-7, followed by 32768 concurrent atomic
+updates across all eight harts. These checks do not establish sustained
+load stability, full OS boot or SPI quickboot on Pico ITX.
+
+LPDDR4X populations still require hardware validation. RAM recovery
+preserves existing SPI training records and uses emulated variables.
+Keep the SPI offsets and UEFI variable reservation when packaging an image.
