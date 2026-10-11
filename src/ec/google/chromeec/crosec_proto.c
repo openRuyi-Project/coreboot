@@ -27,12 +27,12 @@ static void cros_ec_dump_data(const char *name, int cmd, const uint8_t *data,
 {
 	int i;
 
-	printk(BIOS_DEBUG, "%s: ", name);
+	printk(BIOS_SPEW, "%s: ", name);
 	if (cmd != -1)
-		printk(BIOS_DEBUG, "cmd=%#x: ", cmd);
+		printk(BIOS_SPEW, "cmd=%#x: ", cmd);
 	for (i = 0; i < len; i++)
-		printk(BIOS_DEBUG, "%02x ", data[i]);
-	printk(BIOS_DEBUG, "\n");
+		printk(BIOS_SPEW, "%02x ", data[i]);
+	printk(BIOS_SPEW, "\n");
 }
 
 /* Calculate a simple 8-bit checksum of a data block
