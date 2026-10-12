@@ -2,6 +2,7 @@
 #include <bootblock_common.h>
 #include <console/console.h>
 #include <mainboard/early_ec.h>
+#include <mainboard/ec_update.h>
 #include <mainboard/native_boot.h>
 #include <mainboard/power.h>
 #include <soc/cpu_clock.h>
@@ -14,6 +15,9 @@ void bootblock_mainboard_init(void)
 	if (pico_itx_early_cooling_init())
 		die("K3 native coreboot: early cooling failed; DDR remains untouched\n");
 	printk(BIOS_INFO, "K3 native coreboot: EC fan 0 full duty acknowledged\n");
+	char ec_version[K3_EC_VERSION_SIZE];
+	if (!pico_itx_ec_version(ec_version))
+		printk(BIOS_INFO, "EC firmware: %s\n", ec_version);
 	uint64_t trained_bytes = pico_itx_ddr_init();
 	if (k3_system_clock_init())
 		die("K3 system clock initialization failed\n");
