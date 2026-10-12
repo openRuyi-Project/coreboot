@@ -34,6 +34,7 @@
 #define CHANNEL_MASK 0x0f
 #define PERIPHERAL_CHANNEL 1
 #define COMMAND_TIMEOUT_US 50000
+#define EC_READY_TIMEOUT_US (15 * USECS_PER_SEC)
 static uintptr_t base;
 
 static uint32_t reg_read(unsigned int offset)
@@ -127,19 +128,22 @@ int k3_espi_init(const struct k3_espi_config *config)
 	    config->peripheral_base1 <= config->peripheral_base0)
 		return -1;
 	base = config->registers;
+	/* V00.21 takes about 12.5 seconds to restore its complete EC interface. */
+	stopwatch_init_usecs_expire(&deadline, EC_READY_TIMEOUT_US);
+negotiate:
 	reg_write(SLAVE_INT_ENABLE, COMMAND_DONE | COMMAND_ERRORS);
 	reg_write(GLOBAL_CONTROL1, reg_read(GLOBAL_CONTROL1) & ~RESET_DEASSERT);
 	reg_write(GLOBAL_CONTROL1, reg_read(GLOBAL_CONTROL1) | RESET_DEASSERT | SOFTWARE_RESET);
 	if (command(IN_BAND_RESET, 0, NULL))
 		return -1;
-	/* The EC may still be restarting; readiness is established by its reply. */
-	stopwatch_init_usecs_expire(&deadline, 250000);
+	/* Host reset can occur while the independently powered EC is restarting. */
 	while (command(GET_CONFIGURATION, GENERAL_CONFIG, &caps) ||
 	       !(caps & PERIPHERAL_CHANNEL) || caps == UINT32_MAX) {
 		if (stopwatch_expired(&deadline)) {
 			printk(BIOS_ERR, "K3 eSPI has no valid peripheral capability response\n");
 			return -1;
 		}
+		udelay(1000);
 	}
 	general = GENERAL_CRC | (caps & CHANNEL_MASK); /* 20 MHz, single I/O, IO1 alert */
 	for (unsigned int i = 0; i < ARRAY_SIZE(channel_config); i++) {
@@ -167,6 +171,18 @@ int k3_espi_init(const struct k3_espi_config *config)
 	    reg_read(PERIPHERAL_BASE1) != config->peripheral_base1) {
 		printk(BIOS_ERR, "K3 eSPI peripheral window configuration failed\n");
 		return -1;
+	}
+	/* Capabilities can precede the EC command window. Repeat negotiation
+	 * until both are ready, within the same startup deadline.
+	 */
+	uint8_t status = read8((void *)(uintptr_t)config->peripheral_base0);
+	if (status == 0xff || (status & EC_LPC_STATUS_BUSY_MASK)) {
+		if (stopwatch_expired(&deadline)) {
+			printk(BIOS_ERR, "K3 eSPI EC command window did not become ready\n");
+			return -1;
+		}
+		udelay(1000);
+		goto negotiate;
 	}
 	return google_chromeec_mmio_init(config->peripheral_base0,
 					config->peripheral_base0 + 0x100, 0x200);
