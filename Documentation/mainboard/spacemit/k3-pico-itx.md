@@ -31,8 +31,43 @@ does not package an EDK2 payload or write a board.
 Keep carrier wiring and firmware media layout in the board directory.
 The SoC code owns common PMU, eSPI, QSPI, timer and DDR operations.
 The EC fan full-duty request is an early prerequisite for the native
-boot path. OpenSBI owns machine-mode services and X100 hart startup.
+boot path. OpenSBI owns machine-mode services and X100/A100 hart startup.
 EDK2 owns its UEFI device protocols and setup.
+
+## CPU selection
+
+UEFI Setup selects X100 only (default), X100 + A100, or A100 only.
+X100 only preserves the original CPU, topology and interrupt description.
+Mixed mode adds harts 8 through 15 and removes vector and hypervisor ISA
+extensions from every CPU. CPU nodes remain in ascending hart order.
+
+A100 descriptions follow the vendor Linux CPU tree at commit
+`0bef28bfeb51b20a62d82232de44556df942f4dc`: `spacemit,a100`, 32 KiB L1
+instruction/data caches and a shared 1 MiB L2 cache per four-hart cluster.
+Its ISA list is independent of X100 and filtered only for the selected mode.
+
+A100-only mode retains A100 vectors and omits H. OpenSBI initially receives
+all sixteen harts because K3 cold initialization runs on X100 hart 0.
+Coreboot sets `/chosen/boot-hartid` to 8 and builds an A100-only CPU map.
+Before creating its HOBs, EDK2 uses standard SBI HSM calls to transfer to
+hart 8 and stop hart 0. The A100 entry waits for hart 0 to stop before
+reusing the SEC stack. EDK2 disables X100 nodes in its private DT copy;
+Linux consequently boots on A100 with only harts 8 through 15 available.
+
+CPU configuration occupies the 4 KiB NOR sector at `0x20f000`, at the end
+of `EARLY_RESERVED`. Coreboot reads physical NOR even during USB RAM boot.
+The 16-byte little-endian record is `K3CP` (4 bytes), version 1 (u16),
+record size 16 (u16), mode (u32: 0=X100, 1=mixed, 2=A100) and
+CRC-32/ISO-HDLC (u32, over the first 12 bytes). Erased, unsupported or
+invalid records select X100 only. Firmware updates reset this sector
+independently of the preserved UEFI variable store.
+
+The S-mode IMSIC aperture covers sixteen physical hart slots in both
+A100 modes. Its `riscv,guest-index-bits` remains 6 because this also
+defines the physical hart stride. IRQ lists retain the disabled X100
+slots in A100-only mode so the A100 interrupt files keep their addresses.
+
+## Power and memory
 
 APMU power-domain operations live in the K3 SoC code. Both boot
 profiles ensure AUDIO is on before handoff; Linux treats it as an
@@ -102,9 +137,9 @@ implement storage writes; the shared EDK2 Fastboot application owns them.
 
 ## Validation limits
 
-The 16 GiB LPDDR5 validation board is DEB1. Cold training, persistent
+Earlier testing on a 16 GiB LPDDR5 DEB1 covered cold training, persistent
 quickboot, firmware updates preserving NV, USB image loading, standard
-CBFS handoff and automatic RAM Fastboot have passed there. DP/GOP and the
+CBFS handoff and automatic RAM Fastboot. DP/GOP and the
 Fastboot ready screen pass when the capture receiver is active before
 boot. Late receiver connection does not trigger a new DP training attempt.
 
@@ -113,7 +148,15 @@ memory pattern check, AU4562 command readback, both X100 clusters at
 2.4 GHz and RAM Fastboot have passed. HSM start/stop and shared-data
 checks passed twice on harts 1-7, followed by 32768 concurrent atomic
 updates across all eight harts. These checks do not establish sustained
-load stability, full OS boot or SPI quickboot on Pico ITX.
+load stability.
+
+On a 16 GiB Pico ITX, X100-only and A100-only modes booted the installed
+RVA23U64 root filesystem. Per-core RVV and secondary-hart hotplug passed
+with VLEN 256 on X100 and VLEN 1024 on A100. Mixed mode passed per-core
+scalar checks and all fifteen secondary-hart hotplug cycles with a
+standalone RV64GC initramfs. Its device tree omitted V and H and retained
+ascending hart order. DEBUG firmware installation preserved UEFI variables,
+passed full SPI readback, and booted the installed OS from NOR.
 
 LPDDR4X populations still require hardware validation. RAM recovery
 preserves existing SPI training records and uses emulated variables.
