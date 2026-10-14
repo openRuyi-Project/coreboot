@@ -49,6 +49,9 @@ static void *add_coreboot_table_to_fdt(void *fdt)
 	printk(BIOS_INFO, "Adding cbtable@%p to fdt\n", coreboot_table);
 	dt_add_u64_prop(chosen_node, "coreboot-table", (uint64_t)(uintptr_t)coreboot_table);
 
+	if (dt_apply_fixups(tree))
+		die("Failed to apply next-stage device tree fixups");
+
 	size_t next_size = dt_flat_size(tree);
 	void *next_fdt = malloc(next_size);
 	if (!next_fdt) {
