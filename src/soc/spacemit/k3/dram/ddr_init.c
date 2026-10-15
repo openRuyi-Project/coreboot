@@ -254,6 +254,20 @@ uint64_t k3_dram_init(const char *fallback_part, const uint8_t *eeprom, size_t e
 
 	// clear DDR training flag
 	memset(ddr_info, 0, 128);
+	/* Publish the selected configuration on both full training and quick boot.
+	 * Keep the training magic clear on quick boot to avoid rewriting its cache.
+	 */
+	struct k3_memory_info *memory = &ddr_info->memory_info;
+	memory->magic = K3_MEMORY_INFO_MAGIC;
+	memory->version = K3_MEMORY_INFO_VERSION;
+	memory->type = part_info->type;
+	memory->chip_selects = part_info->ranks;
+	memory->data_rate_mtps = part_info->data_rate_mtps;
+	memory->device_count = 2;
+	memory->device_size_mib = part_info->size_mb;
+	memcpy(memory->part_number, part_info->part_number,
+	       MIN(strlen(part_info->part_number), sizeof(memory->part_number) - 1));
+	memory->crc32 = crc32(0, (const uint8_t *)&memory->version, sizeof(*memory) - 8);
 	if (DDR_TRAINING_MODE == ddr_mode) {
 		ddr_info->magic = DDR_TRAINING_INFO_MAGIC;
 		ddr_info->type = part_info->type;
@@ -266,6 +280,9 @@ uint64_t k3_dram_init(const char *fallback_part, const uint8_t *eeprom, size_t e
 		memcpy((void*)DDR_TRAINING_INFO_BUFF, ddr_info, sizeof(struct ddr_info_t));
 	} else {
 		printf("DDR quick boot consume %ldms\n", timestamp);
+		struct ddr_info_t *handoff = (void *)DDR_TRAINING_INFO_BUFF;
+		if (&handoff->memory_info != memory)
+			memcpy(&handoff->memory_info, memory, sizeof(*memory));
 	}
 	ret = test_pattern(CONFIG_SYS_SDRAM_BASE, DDR_CHECK_SIZE);
 	if (ret < 0) {

@@ -3,6 +3,7 @@
 #define K3_DDR_COREBOOT_H
 
 #include <types.h>
+#include <soc/memory_info.h>
 #include <commonlib/helpers.h>
 #include <commonlib/endian.h>
 #include <console/console.h>
@@ -29,9 +30,13 @@ struct ddr_info_t {
 	uint32_t type;
 	uint32_t cs_num;
 	uint32_t data_rate;
-	uint8_t reserved[128 - 40];
+	struct k3_memory_info memory_info;
+	uint8_t reserved[128 - 40 - sizeof(struct k3_memory_info)];
 	uint8_t training_info[0x9800 - 128];
 };
+
+_Static_assert(offsetof(struct ddr_info_t, training_info) == 128, "DDR training offset");
+_Static_assert(sizeof(struct ddr_info_t) == 0x9800, "DDR training record size");
 
 typedef uintptr_t fdt_addr_t;
 typedef uint64_t fdt_size_t;
