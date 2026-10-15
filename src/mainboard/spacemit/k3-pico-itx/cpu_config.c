@@ -156,12 +156,17 @@ static int configure_cpus(struct device_tree_fixup *fixup, struct device_tree *t
 	static const struct {
 		const char *path;
 		u32 irq;
+		const char *a100_name;
+		u64 a100_address;
+		u64 a100_size;
 	} controllers[] = {
-		{ "/soc/interrupt-controller@e0400000", 9 },
-		{ "/soc/interrupt-controller@f1000000", 11 },
-		{ "/soc/interrupt-controller@f1810000", 3 },
-		{ "/soc/timer@f1814000", 7 },
-		{ "/soc/interrupt-controller@f181c000", 1 },
+		{ "/soc/interrupt-controller@e0400000", 9,
+		  "interrupt-controller@e0600000", 0xe0600000, 0x200000 },
+		{ "/soc/interrupt-controller@f1000000", 11, NULL, 0, 0 },
+		{ "/soc/interrupt-controller@f1810000", 3, NULL, 0, 0 },
+		{ "/soc/timer@f1814000", 7, NULL, 0, 0 },
+		{ "/soc/interrupt-controller@f181c000", 1,
+		  "interrupt-controller@f181c020", 0xf181c020, 0x20 },
 	};
 	u32 intcs[K3_HARTS];
 	char path[64];
@@ -201,23 +206,39 @@ static int configure_cpus(struct device_tree_fixup *fixup, struct device_tree *t
 	}
 
 	for (size_t i = 0; i < ARRAY_SIZE(controllers); i++) {
+		unsigned int first = mode == A100_ONLY && controllers[i].a100_name ?
+			X100_HARTS : 0;
+		unsigned int count = K3_HARTS - first;
 		struct device_tree_node *node = dt_find_node_by_path(tree,
 			controllers[i].path, NULL, NULL, 0);
+		if (!node && first) {
+			/* Allow the same fixup to run again on the renamed node. */
+			snprintf(path, sizeof(path), "/soc/%s", controllers[i].a100_name);
+			node = dt_find_node_by_path(tree, path, NULL, NULL, 0);
+		}
 		if (!node)
 			return -1;
-		u32 *irqs = xmalloc(K3_HARTS * 2 * sizeof(*irqs));
-		for (unsigned int hart = 0; hart < K3_HARTS; hart++) {
-			irqs[2 * hart] = htobe32(intcs[hart]);
-			irqs[2 * hart + 1] = htobe32(controllers[i].irq);
+		u32 *irqs = xmalloc(count * 2 * sizeof(*irqs));
+		for (unsigned int index = 0; index < count; index++) {
+			irqs[2 * index] = htobe32(intcs[first + index]);
+			irqs[2 * index + 1] = htobe32(controllers[i].irq);
 		}
-		dt_add_bin_prop(node, "interrupts-extended", irqs, K3_HARTS * 2 * sizeof(*irqs));
-	}
+		dt_add_bin_prop(node, "interrupts-extended", irqs, count * 2 * sizeof(*irqs));
 
-	struct device_tree_node *simsic = dt_find_node_by_path(tree,
-		controllers[0].path, NULL, NULL, 0);
-	const u64 address = 0xe0400000, size = 0x400000;
-	/* Keep guest-index-bits=6: it describes the physical hart stride too. */
-	dt_add_reg_prop(simsic, &address, &size, 1, 2, 2);
+		if (first) {
+			/* S-mode lists start at hart 8. Move the register window with
+			 * them: IMSIC uses a 256 KiB stride, SSWI uses 4 bytes.
+			 * OpenSBI retains all M-mode routes for its X100 boot hart.
+			 */
+			node->name = controllers[i].a100_name;
+			dt_add_reg_prop(node, &controllers[i].a100_address,
+				&controllers[i].a100_size, 1, 2, 2);
+		} else if (i == 0) {
+			const u64 address = 0xe0400000, size = 0x400000;
+			/* Keep guest-index-bits=6: it describes the hart stride too. */
+			dt_add_reg_prop(node, &address, &size, 1, 2, 2);
+		}
+	}
 	printk(BIOS_INFO, "K3 CPU mode: %s\n", mode == A100_ONLY ?
 	       "A100 only, vector enabled" : "X100 + A100, scalar only");
 	return 0;
