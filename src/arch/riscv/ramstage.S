@@ -35,17 +35,20 @@ _start:
 	#NOTE a1 contains FDT and should not be cluttered above
 	call hls_init
 
-	li   a0, CONFIG_RISCV_WORKING_HARTID
-	call smp_pause
-
 	# initialize entry of interrupt/exception
 	la   t0, trap_entry
 	csrw mtvec, t0
 
+	# All harts now have DRAM stacks, HLS and trap code. Let the SoC
+	# synchronize them before releasing any temporary RAM used as cache.
+	call exit_car
+
+	li   a0, CONFIG_RISCV_WORKING_HARTID
+	call smp_pause
+
 	# clear any pending interrupts
 	csrwi mip, 0
 
-	call exit_car
 	# set up the mstatus register
 	call mstatus_init
 	tail main

@@ -24,6 +24,7 @@ ramstage-y += cbmem.c
 ramstage-y += otp.c
 ramstage-y += clock.c
 ramstage-y += chip.c
+ramstage-y += cache.c
 
 $(objcbfs)/bootblock.bin: $(objcbfs)/bootblock.raw.bin
 	@printf "    GPT        $(notdir $(@))\n"

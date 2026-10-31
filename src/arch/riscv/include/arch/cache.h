@@ -8,4 +8,7 @@ static inline void dcache_clean_all(void) {}
 static inline void dcache_invalidate_all(void) {}
 static inline void dcache_clean_invalidate_all(void) {}
 
+/* SoC hook called by every hart after moving to ramstage code and stacks. */
+void exit_car(void);
+
 #endif /* ARCH_CACHE_H */
