@@ -111,38 +111,31 @@ static void fu740_spi_release_bus(const struct spi_slave *slave)
 	write32(&spictrl->csmode.raw_bits, csmode.raw_bits);
 }
 
-// reset spi flash chip
-static void fu740_spi_reset(volatile struct fu740_spi_ctrl *spictrl_reg)
+/* Configure memory-mapped reads while preserving the flash chip state. */
+int fu740_spi_mmap(unsigned int bus, unsigned int frequency,
+		   const struct fu740_spi_ffmt_config *config)
 {
-	fu740_spi_tx(spictrl_reg, 0x66);
-	fu740_spi_tx(spictrl_reg, 0x99);
-}
+	if (bus >= 2 || !frequency || config->cmd_en > 1 || config->addr_len > 4 ||
+	    config->pad_cnt > 15 || config->cmd_proto > 2 || config->addr_proto > 2 ||
+	    config->data_proto > 2 || config->cmd_code > 255 || config->pad_code > 255)
+		return -1;
 
-// setup the ffmt (SPI flash instruction format) register
-__maybe_unused static int fu740_spi_setup_ffmt(volatile struct fu740_spi_ctrl *spictrl_reg,
-			 const struct fu740_spi_config *config)
-{
-	//union fu740_spi_reg_fctrl fctrl;
-	union fu740_spi_reg_ffmt ffmt;
+	struct fu740_spi_ctrl *ctrl = fu740_spi_ctrls[bus];
+	union fu740_spi_reg_ffmt format = { .raw_bits = 0 };
 
-	printk(BIOS_DEBUG, "config->data_proto: %d, config->cmd_code: %d\n",
-			config->ffmt_config.data_proto,
-			config->ffmt_config.cmd_code);
-
-	//TODO test without this here
-	fu740_spi_reset(spictrl_reg);
-
-	ffmt.raw_bits   = 0;
-	ffmt.cmd_en     = 1; // enable sending of command
-	ffmt.addr_len   = 3; // number of address bytes (0-4)
-	ffmt.pad_cnt    = 0; // number of dummy cycles TODO maybe not working
-	ffmt.cmd_proto  = FU740_SPI_PROTO_S; // protocol for transmitting command
-	ffmt.addr_proto = FU740_SPI_PROTO_S; // protocol for transmitting address and padding
-	ffmt.data_proto = config->ffmt_config.data_proto; // protocol for receiving data bytes
-	ffmt.cmd_code   = config->ffmt_config.cmd_code;   // value of command byte
-	ffmt.pad_code   = 0; // First 8 bits to transmit during dummy cycles
-	write32(&spictrl_reg->ffmt.raw_bits, ffmt.raw_bits);
-
+	write32(&ctrl->fctrl.raw_bits, 0);
+	write32(&ctrl->csmode.raw_bits, FU740_SPI_CSMODE_AUTO);
+	write32(&ctrl->sckdiv, fu740_spi_min_clk_divisor(clock_get_pclk(), frequency));
+	format.cmd_en = config->cmd_en;
+	format.addr_len = config->addr_len;
+	format.pad_cnt = config->pad_cnt;
+	format.cmd_proto = config->cmd_proto;
+	format.addr_proto = config->addr_proto;
+	format.data_proto = config->data_proto;
+	format.cmd_code = config->cmd_code;
+	format.pad_code = config->pad_code;
+	write32(&ctrl->ffmt.raw_bits, format.raw_bits);
+	write32(&ctrl->fctrl.raw_bits, 1);
 	return 0;
 }
 

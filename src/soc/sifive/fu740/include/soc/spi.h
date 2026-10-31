@@ -52,5 +52,7 @@ struct fu740_spi_config {
 extern struct fu740_spi_config fu740_spi_configs[];
 
 int fu740_spi_setup(const struct spi_slave *slave);
+int fu740_spi_mmap(unsigned int bus, unsigned int frequency,
+		   const struct fu740_spi_ffmt_config *config);
 
 #endif /* __SOC_SIFIVE_FU740_SPI_H__ */
