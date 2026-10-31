@@ -2276,12 +2276,33 @@ struct device_tree_node *dt_add_reserved_memory_region(struct device_tree *tree,
 		      const char *name, const char *compatible, uint64_t addr, uint64_t size,
 		      bool nomap)
 {
-	uint32_t addr_cells, size_cells;
-	const char *path[] = { "reserved-memory", name, NULL };
+	uint32_t addr_cells = 2, size_cells = 1;
+	dt_read_cell_props(tree->root, &addr_cells, &size_cells);
+	const char *parent_path[] = { "reserved-memory", NULL };
+	struct device_tree_node *parent = dt_find_node(tree->root, parent_path,
+						     NULL, NULL, 1);
+	if (!parent)
+		return NULL;
+
+	/* Reserved memory does not inherit cell counts: DT consumers require
+	 * these properties explicitly, matching the root, plus empty ranges. */
+	uint32_t parent_addr_cells = addr_cells, parent_size_cells = size_cells;
+	dt_read_cell_props(parent, &parent_addr_cells, &parent_size_cells);
+	const void *ranges;
+	size_t ranges_size;
+	dt_find_bin_prop(parent, "ranges", &ranges, &ranges_size);
+	if (parent_addr_cells != addr_cells || parent_size_cells != size_cells ||
+	    ranges_size || addr_cells > 2 || !addr_cells || size_cells > 2 || !size_cells) {
+		printk(BIOS_ERR, "Incompatible reserved-memory address format\n");
+		return NULL;
+	}
+	dt_add_u32_prop(parent, "#address-cells", addr_cells);
+	dt_add_u32_prop(parent, "#size-cells", size_cells);
+	dt_add_bin_prop(parent, "ranges", NULL, 0);
+	const char *path[] = { name, NULL };
 
 	/* Find or create the node. Using 1 for the 'create' argument. */
-	struct device_tree_node *node = dt_find_node(tree->root, path,
-						     &addr_cells, &size_cells, 1);
+	struct device_tree_node *node = dt_find_node(parent, path, NULL, NULL, 1);
 	if (!node) {
 		printk(BIOS_ERR, "Failed to create reserved-memory node: %s\n", name);
 		return NULL;
