@@ -9,7 +9,9 @@
 #include <cbfs.h>
 #include <console/console.h>
 #include <commonlib/device_tree.h>
+#include <commonlib/helpers.h>
 #include <cbmem.h>
+#include <stdlib.h>
 
 struct arch_prog_run_args {
 	struct prog *prog;
@@ -53,10 +55,23 @@ static void *add_coreboot_table_to_fdt(void *fdt)
 		die("Failed to apply next-stage device tree fixups");
 
 	size_t next_size = dt_flat_size(tree);
-	void *next_fdt = malloc(next_size);
+	size_t capacity = CONFIG(RISCV_OPENSBI) ?
+		ALIGN_UP(next_size + 8 * KiB, 4 * KiB) : next_size;
+	void *next_fdt = CONFIG(RISCV_OPENSBI) ?
+		memalign(4 * KiB, capacity) : malloc(capacity);
 	if (!next_fdt) {
+		if (CONFIG(RISCV_OPENSBI))
+			die("Failed to allocate reserved OpenSBI device tree");
 		printk(BIOS_ERR, "Failed to allocate memory for next-stage FDT\n");
 		return fdt;
+	}
+	/* OpenSBI retains this pointer and grows the tree in place. Its buffer
+	 * must remain reserved when a UEFI payload builds its memory map. */
+	if (CONFIG(RISCV_OPENSBI)) {
+		if (!dt_add_reserved_memory_region(tree, "firmware-fdt", NULL,
+				(uintptr_t)next_fdt, capacity, true) ||
+		    dt_flat_size(tree) > capacity - 4 * KiB)
+			die("Insufficient space for OpenSBI device tree fixups");
 	}
 
 	dt_flatten(tree, next_fdt);
