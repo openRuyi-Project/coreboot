@@ -186,15 +186,13 @@ static void configure_pll(u32 *reg, const struct pll_settings *s)
 }
 
 /*
- * Section 7.1 recommends a frequency of 1.0 GHz (up to 1.5 GHz is possible)
- * Section 7.4.2 provides the necessary values
- *
- * COREPLL is set up for ~1 GHz output frequency.
- * divr = 0 (x1), divf = 76 (x154) => (4004 MHz VCO), divq = 2 (/4 Output divider)
+ * Match the Unmatched's 1.2 GHz boot frequency. With the 26 MHz reference,
+ * the integer PLL produces 1196 MHz, as in the mainline board configuration.
+ * divr = 0 (x1), divf = 91 (x184) => 4784 MHz VCO, divq = 2 (/4 output).
  */
 static const struct pll_settings corepll_settings = {
 	.divr = 0,
-	.divf = 76,
+	.divf = 91,
 	.divq = 2,
 	.range = 4,
 	.bypass = 0,
