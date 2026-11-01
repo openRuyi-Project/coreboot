@@ -9,6 +9,7 @@
 #include <device/mmio.h>
 #include <soc/addressmap.h>
 #include <soc/clock.h>
+#include <soc/i2c.h>
 
 #define PRE_LOW 0x00
 #define PRE_HIGH 0x04
@@ -54,15 +55,10 @@ static int send_byte(void *base, uint8_t byte, uint8_t command)
 	return wait_transfer(base, true);
 }
 
-int platform_i2c_transfer(unsigned int bus, struct i2c_msg *segments, int count)
+int fu740_i2c_init(unsigned int bus)
 {
-	if (bus > 1 || !segments || count <= 0)
+	if (bus > 1)
 		return -1;
-	for (int i = 0; i < count; i++) {
-		if (segments[i].slave > 0x7f || segments[i].flags & ~I2C_M_RD ||
-		    (segments[i].len && !segments[i].buf))
-			return -1;
-	}
 
 	void *base = (void *)(uintptr_t)(bus ? FU740_I2C_1 : FU740_I2C_0);
 	if (read8(base + STATUS) & (BUSY | TIP))
@@ -74,13 +70,29 @@ int platform_i2c_transfer(unsigned int bus, struct i2c_msg *segments, int count)
 	if (divider > UINT16_MAX)
 		return -1;
 
-	uint8_t saved[] = {read8(base + PRE_LOW), read8(base + PRE_HIGH),
-			   read8(base + CONTROL)};
 	write8(base + CONTROL, 0);
 	write8(base + PRE_LOW, divider);
 	write8(base + PRE_HIGH, divider >> 8);
 	write8(base + COMMAND, IACK);
 	write8(base + CONTROL, ENABLE);
+	return 0;
+}
+
+int platform_i2c_transfer(unsigned int bus, struct i2c_msg *segments, int count)
+{
+	if (bus > 1 || !segments || count <= 0)
+		return -1;
+	for (int i = 0; i < count; i++) {
+		if (segments[i].slave > 0x7f || segments[i].flags & ~I2C_M_RD ||
+		    (segments[i].len && !segments[i].buf))
+			return -1;
+	}
+
+	void *base = (void *)(uintptr_t)(bus ? FU740_I2C_1 : FU740_I2C_0);
+	uint8_t saved[] = {read8(base + PRE_LOW), read8(base + PRE_HIGH),
+			   read8(base + CONTROL)};
+	if (fu740_i2c_init(bus))
+		return -1;
 
 	int ret = 0;
 	for (int i = 0; i < count && !ret; i++) {

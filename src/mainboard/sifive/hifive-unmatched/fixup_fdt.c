@@ -7,6 +7,7 @@
 #include <device/i2c_simple.h>
 #include <commonlib/endian.h>
 #include <soc/sdram.h>
+#include <soc/i2c.h>
 #include <cbfs.h>
 #include <cbmem.h>
 #include <commonlib/device_tree.h>
@@ -131,6 +132,10 @@ static struct device_tree_fixup board_fixup = { .fixup = fixup_board_tree };
 
 static void prepare_fdt(void *unused)
 {
+	/* OpenSBI's DA9063 reset driver expects an initialized I2C bus. */
+	if (fu740_i2c_init(0))
+		die("Unable to initialize the PMIC I2C bus");
+
 	void *fdt = cbfs_map("fallback/DTB", NULL);
 	if (!fdt || !fdt_is_valid(fdt))
 		die("Unable to load fallback/DTB");
