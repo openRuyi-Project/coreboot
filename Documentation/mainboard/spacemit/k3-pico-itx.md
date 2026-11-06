@@ -2,7 +2,7 @@
 
 The port boots the Pico ITX board from SPI NOR or a BootROM USB recovery
 image. Coreboot owns SRAM entry, early EC cooling, LPDDR4X/LPDDR5 training and
-payload loading. OpenSBI supplies machine-mode services; EDK2 supplies
+payload loading. OpenSBI supplies machine-mode services. EDK2 supplies
 UEFI device protocols, Setup and Fastboot.
 
 ## Build
@@ -21,10 +21,10 @@ CROSS_COMPILE_riscv=riscv64-linux-gnu- make
 Set `CONFIG_OPENSBI_BLOB_PATH` to the built OpenSBI ELF in menuconfig.
 The configuration does not assume a source or output directory layout.
 The normal profile uses `fw_dynamic.elf`. Its link address places OpenSBI
-in the reserved DRAM window; coreboot passes the payload entry and mode
+in the reserved DRAM window. coreboot passes the payload entry and mode
 separately through `fw_dynamic_info` at runtime.
-The configuration builds coreboot with an external OpenSBI image; it
-does not package an EDK2 payload or write a board.
+The configuration builds coreboot with an external OpenSBI image.
+It does not package an EDK2 payload or write a board.
 
 ## Ownership
 
@@ -51,8 +51,8 @@ all sixteen harts because K3 cold initialization runs on X100 hart 0.
 Coreboot sets `/chosen/boot-hartid` to 8 and builds an A100-only CPU map.
 Before creating its HOBs, EDK2 uses standard SBI HSM calls to transfer to
 hart 8 and stop hart 0. The A100 entry waits for hart 0 to stop before
-reusing the SEC stack. EDK2 disables X100 nodes in its private DT copy;
-Linux consequently boots on A100 with only harts 8 through 15 available.
+reusing the SEC stack. EDK2 disables X100 nodes in its private DT copy.
+Linux boots on A100 with only harts 8 through 15 available.
 
 CPU configuration occupies the 4 KiB NOR sector at `0x20f000`, at the end
 of `EARLY_RESERVED`. Coreboot reads physical NOR even during USB RAM boot.
@@ -62,15 +62,17 @@ CRC-32/ISO-HDLC (u32, over the first 12 bytes). Erased, unsupported or
 invalid records select X100 only. Firmware updates reset this sector
 independently of the preserved UEFI variable store.
 
-The S-mode IMSIC aperture covers sixteen physical hart slots in both
-A100 modes. Its `riscv,guest-index-bits` remains 6 because this also
-defines the physical hart stride. IRQ lists retain the disabled X100
-slots in A100-only mode so the A100 interrupt files keep their addresses.
+Mixed mode describes sixteen S-mode IMSIC hart slots. A100-only mode
+describes only harts 8 through 15 in the S-mode IMSIC and SSWI IRQ lists.
+It moves the IMSIC register window to `0xe0600000` and the SSWI window to
+`0xf181c020` to preserve the physical hart-slot addresses.
+The IMSIC `riscv,guest-index-bits` remains 6 because it defines the hart
+stride. OpenSBI retains all sixteen M-mode interrupt targets.
 
 ## Power and memory
 
-APMU power-domain operations live in the K3 SoC code. Both boot
-profiles ensure AUDIO is on before handoff; Linux treats it as an
+APMU power-domain operations live in the K3 SoC code. SPI and USB boot
+both enable AUDIO before handoff. Linux treats it as an
 always-on domain. EDK2 and Linux own their device consumers in their
 respective stages. These operations preserve unrelated APMU clock/reset
 fields and never power off the APMU controller itself.
@@ -86,7 +88,7 @@ verifies the command before changing PLLs. Page 0 supplies A100 and is
 initialized to 950 mV before the hart startup handoff. The previous page
 selection is restored after access.
 Records without PMIC Type retain the MPQ identity-checked path used on
-DEB1; the `mpq8655` TLV name selects that path. Other declared regulator
+DEB1. The `mpq8655` TLV name selects that path. Other declared regulator
 types cannot enable the maximum CPU operating point.
 
 The common P1 PMIC enables BUCK1..6, ALDO1/2/4 and DLDO1..7 before
@@ -100,7 +102,7 @@ the FE1.1S USB2 hub's 3.3 V supply if it is off. The EC reports the pin's
 name and direction before a name-based GPIO command is issued. Readback
 must confirm the enable, and an already powered hub is not cycled.
 DEB1 does not use this board-specific operation. Firmware retains hub
-power at OS handoff; this does not add Linux control of the EC GPIO.
+power at OS handoff. This does not add Linux control of the EC GPIO.
 
 ## DDR source provenance
 
@@ -108,7 +110,7 @@ The controller/PHY training sources, register tables and compressed firmware
 are unchanged from revision `e4043c70d6e921238fe43e485f1efc71b30b00d0`.
 [k3-ddr-source.json](k3-ddr-source.json) records the original hashes and the
 coreboot API adaptations. Both LPDDR4X and LPDDR5, including quickboot,
-are built. Board EEPROM TLV 0x45 selects the part; if unavailable, the board
+are built. Board EEPROM TLV 0x45 selects the part. If unavailable, the board
 uses the same default part number as its SPL device tree. The original
 part table supplies capacity, rank count, bus organization and data rate.
 
@@ -121,8 +123,8 @@ Normal NOR boot reads the training record at SPI offset `0x10000`.
 USB download and SD boot force full training. A valid record must match
 the selected DDR type, rank count and data rate and pass the original CRC.
 EDK2 saves a new cold-training record in the same `0x9800`-byte format
-only when BootROM reports an actual NOR boot;
-quickboot clears the marker and does not request another save. Firmware
+only when BootROM reports an actual NOR boot.
+Quickboot clears the marker and does not request another save. Firmware
 updates erase the record, causing full training on the following boot.
 RAM recovery does not write a training record. It fits inside BOOTINFO,
 before the bootblock at `0x20000`, and is separate from UEFI variables at `0x700000`.
@@ -133,7 +135,7 @@ window. NOR boot reads the firmware regions from flash. Both paths then
 use the same FMAP/CBFS verification, stages and FW_DYNAMIC payload loading.
 The entry and full image must come from the same build because the entry
 contains the CBFS metadata hash anchor. Coreboot's USB transport does not
-implement storage writes; the shared EDK2 Fastboot application owns them.
+implement storage writes. The shared EDK2 Fastboot application owns them.
 
 ## Validation limits
 
