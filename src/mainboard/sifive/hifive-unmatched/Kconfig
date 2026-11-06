@@ -12,6 +12,15 @@ config BOARD_SPECIFIC_OPTIONS
 	select SPI_FLASH_ISSI
 	select SPI_SDCARD
 
+config HIFIVE_UNMATCHED_JTAG_BOOT
+	bool "Load CBFS into DRAM over JTAG"
+	default n
+	help
+	  Read the firmware image from DRAM at 0x90000000. Load bootblock
+	  at 0x08000000 and start all five harts after reset. Break at
+	  cbmem_initialize_empty(), after DDR initialization, to load CBFS
+	  before resuming. This leaves SPI flash and the SD card untouched.
+
 config HEAP_SIZE
 	default 0x20000
 

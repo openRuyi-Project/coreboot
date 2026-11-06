@@ -22,14 +22,6 @@
 #define MSEL_SPI1SD(m)	((m) ==  8)
 #define MSEL_SPI2SD(m)	((m) == 11)
 
-struct fu740_spi_config fu740_spi_configs[] = {
-	{ 0 },
-	{
-		.freq = 10*1000*1000,
-	},
-	{ 0 },
-};
-
 static struct spi_sdcard spi2_sdcard;
 static struct spi_flash spi_flash;
 static bool spi_flash_init_done;
