@@ -8,6 +8,7 @@
 #include <commonlib/endian.h>
 #include <soc/sdram.h>
 #include <cbfs.h>
+#include <cbmem.h>
 #include <commonlib/device_tree.h>
 #include <bootstate.h>
 #include <mcall.h>
@@ -111,41 +112,33 @@ static void fixup_memory(struct device_tree_node *parent)
 	}
 }
 
-static void fixup_fdt(void *unused)
+static int fixup_board_tree(struct device_tree_fixup *fixup, struct device_tree *tree)
 {
-	printk(BIOS_DEBUG, "fix up FDT\n");
-
-	void *fdt_rom;
-	struct device_tree *tree;
-
-	/* load flat dt from cbfs */
-	fdt_rom = cbfs_map("fallback/DTB", NULL);
-
-	if (fdt_rom == NULL) {
-		printk(BIOS_ERR, "Unable to load fallback/DTB from CBFS\n");
-		return;
-	}
-
-	/* Expand DT into a tree */
-	tree = fdt_unflatten(fdt_rom);
-
-	/* fixup tree */
 	fixup_mac(tree->root);
 	fixup_memory(tree->root);
 
-	/* convert the tree to a flat dt */
-	void *dt = malloc(dt_flat_size(tree));
-
-	if (dt == NULL) {
-		printk(BIOS_ERR, "Unable to allocate memory for flat device tree\n");
-		return;
-	}
-
-	dt_flatten(tree, dt);
-
-	/* update HLS */
-	for (int i = 0; i < CONFIG_MAX_CPUS; i++)
-		OTHER_HLS(i)->fdt = dt;
+	/* Keep the coreboot tables and console out of the UEFI allocator. */
+	void *cbmem_base;
+	size_t cbmem_size;
+	if (cbmem_get_region(&cbmem_base, &cbmem_size) ||
+	    !dt_add_reserved_memory_region(tree, "coreboot", NULL,
+			(uintptr_t)cbmem_base, cbmem_size, true))
+		return -1;
+	return 0;
 }
 
-BOOT_STATE_INIT_ENTRY(BS_WRITE_TABLES, BS_ON_EXIT, fixup_fdt, NULL);
+static struct device_tree_fixup board_fixup = { .fixup = fixup_board_tree };
+
+static void prepare_fdt(void *unused)
+{
+	void *fdt = cbfs_map("fallback/DTB", NULL);
+	if (!fdt || !fdt_is_valid(fdt))
+		die("Unable to load fallback/DTB");
+
+	/* The architecture handoff applies board changes and flattens only once. */
+	list_insert_after(&board_fixup.list_node, &device_tree_fixups);
+	for (int i = 0; i < CONFIG_MAX_CPUS; i++)
+		OTHER_HLS(i)->fdt = fdt;
+}
+
+BOOT_STATE_INIT_ENTRY(BS_WRITE_TABLES, BS_ON_EXIT, prepare_fdt, NULL);
