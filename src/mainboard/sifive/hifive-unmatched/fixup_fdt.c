@@ -4,23 +4,68 @@
 #include <stdlib.h>
 #include <string.h>
 #include <console/console.h>
-#include <soc/otp.h>
+#include <device/i2c_simple.h>
+#include <commonlib/endian.h>
 #include <soc/sdram.h>
 #include <cbfs.h>
 #include <commonlib/device_tree.h>
 #include <bootstate.h>
 #include <mcall.h>
 
+static bool valid_mac(const uint8_t *mac, size_t size)
+{
+	static const uint8_t zero[6];
+	return mac && size == 6 && !(mac[0] & 1) && memcmp(mac, zero, 6);
+}
+
+static bool read_board_mac(uint8_t mac[6])
+{
+	/* SiFive board EEPROM v1, also used by U-Boot's Unmatched board code. */
+	uint8_t data[37];
+	static const uint8_t magic[] = {0xf1, 0x5e, 0x50, 0x45};
+	if (i2c_read_bytes(0, 0x54, 0, data, sizeof(data)) ||
+	    memcmp(data, magic, sizeof(magic)) || data[4] != 1 ||
+	    read_le16(data + 5) != 2)
+		return false;
+
+	/* The EEPROM stores the reflected IEEE CRC32, little endian. */
+	uint32_t crc = UINT32_MAX;
+	for (size_t i = 0; i < 33; i++) {
+		crc ^= data[i];
+		for (unsigned int bit = 0; bit < 8; bit++)
+			crc = (crc >> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+	}
+	if (~crc != read_le32(data + 33) || !valid_mac(data + 27, 6))
+		return false;
+	memcpy(mac, data + 27, 6);
+	return true;
+}
+
 static void do_fixup_mac(struct device_tree_node *node)
 {
-	uint32_t serial = otp_read_serial();
-	static unsigned char mac[6] = { 0x70, 0xb3, 0xd5, 0x92, 0xf0, 0x00 };
-	if (serial != ~0) {
-		mac[5] |= (serial >>  0) & 0xff;
-		mac[4] |= (serial >>  8) & 0xff;
-		mac[3] |= (serial >> 16) & 0xff;
+	const void *data;
+	size_t size;
+	/* Preserve an intentional valid address supplied with the input DT. */
+	dt_find_bin_prop(node, "mac-address", &data, &size);
+	if (valid_mac(data, size))
+		return;
+	dt_find_bin_prop(node, "local-mac-address", &data, &size);
+	if (valid_mac(data, size))
+		return;
+
+	uint8_t mac[6];
+	if (!read_board_mac(mac)) {
+		printk(BIOS_ERR, "Unmatched: no valid Ethernet address in board EEPROM\n");
+		return;
 	}
-	dt_add_bin_prop(node, "local-mac-address", mac, 6);
+	/* The tree retains this buffer until the final flattening pass. */
+	uint8_t *address = malloc(sizeof(mac));
+	if (!address)
+		die("Unable to allocate Ethernet address");
+	memcpy(address, mac, sizeof(mac));
+	dt_add_bin_prop(node, "local-mac-address", address, sizeof(mac));
+	printk(BIOS_INFO, "Unmatched Ethernet: %02x:%02x:%02x:%02x:%02x:%02x\n",
+	       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
 static void fixup_mac(struct device_tree_node *parent)
