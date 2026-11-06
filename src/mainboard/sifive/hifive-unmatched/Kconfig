@@ -18,6 +18,9 @@ config HEAP_SIZE
 config MAINBOARD_DIR
 	default "sifive/hifive-unmatched"
 
+config FMDFILE
+	default "src/mainboard/sifive/hifive-unmatched/board.fmd"
+
 config MAINBOARD_PART_NUMBER
 	default "HiFive Unmatched"
 
