@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config SOC_ESWIN_EIC7700
+	bool
+	select ARCH_RISCV_RV64
+	select ARCH_RISCV_S
+	select ARCH_RISCV_U
+	select ARCH_RISCV_PMP
+	select ARCH_BOOTBLOCK_RISCV
+	select ARCH_VERSTAGE_RISCV
+	select ARCH_ROMSTAGE_RISCV
+	select ARCH_RAMSTAGE_RISCV
+	select DRIVERS_UART_8250MEM_32
+	select UART_OVERRIDE_REFCLK
+	select RISCV_USE_ARCH_TIMER
+	select RISCV_HAS_OPENSBI
+
+if SOC_ESWIN_EIC7700
+
+config SEPARATE_ROMSTAGE
+	default n
+
+config MEMLAYOUT_LD_FILE
+	default "src/soc/eswin/eic7700/memlayout.ld"
+
+config RISCV_ARCH
+	default "rv64imafdc"
+
+config RISCV_ABI
+	default "lp64d"
+
+config RISCV_CODEMODEL
+	default "medany"
+
+config MAX_CPUS
+	default 4
+
+config RISCV_WORKING_HARTID
+	default 0
+
+config RISCV_SOC_HAS_MENVCFG
+	default n
+
+config OPENSBI_PLATFORM
+	default "generic"
+
+config OPENSBI_TEXT_START
+	default 0x80000000
+
+config RISCV_OPENSBI
+	default y
+
+endif
