@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# MCPU image loaded into DRAM by the SCPU. This is not the raw SPI layout.
+FLASH 0x400000 {
+	BOOTBLOCK@0x0 0x20000
+	FMAP@0x20000 0x1000
+	COREBOOT(CBFS)@0x21000 0x3df000
+}

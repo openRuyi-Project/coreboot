@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config BOARD_SIFIVE_HIFIVE_PREMIER_P550
+	bool "HiFive Premier P550"

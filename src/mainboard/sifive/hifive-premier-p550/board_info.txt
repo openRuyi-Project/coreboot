@@ -1,0 +1,4 @@
+Vendor name: SiFive
+Board name: HiFive Premier P550
+Category: eval
+ROM protocol: SPI

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+if BOARD_SIFIVE_HIFIVE_PREMIER_P550
+
+config BOARD_SPECIFIC_OPTIONS
+	def_bool y
+	select SOC_ESWIN_EIC7700
+	select BOARD_ROMSIZE_KB_4096
+	select MISSING_BOARD_RESET
+	select FLATTENED_DEVICE_TREE
+
+config MAINBOARD_DIR
+	default "sifive/hifive-premier-p550"
+
+config MAINBOARD_PART_NUMBER
+	default "HiFive Premier P550"
+
+config FMDFILE
+	default "src/mainboard/sifive/hifive-premier-p550/board.fmd"
+
+config HEAP_SIZE
+	default 0x20000
+
+endif
