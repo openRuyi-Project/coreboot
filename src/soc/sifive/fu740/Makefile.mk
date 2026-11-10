@@ -12,7 +12,6 @@ bootblock-y += cbmem.c
 bootblock-y += otp.c
 bootblock-y += clock.c
 bootblock-y += ddrregs.c
-bootblock-y += chip.c
 bootblock-y += gpio.c
 
 
