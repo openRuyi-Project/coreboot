@@ -24,7 +24,7 @@ config MEMLAYOUT_LD_FILE
 	default "src/soc/eswin/eic7700/memlayout.ld"
 
 config RISCV_ARCH
-	default "rv64imafdc"
+	default "rv64gc_zba_zbb"
 
 config RISCV_ABI
 	default "lp64d"
