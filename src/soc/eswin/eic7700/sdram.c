@@ -19,6 +19,9 @@
 #define MRCTRL1 0x10084
 #define MRSTAT 0x10090
 #define MRRDATA0 0x10094
+#define ECCCFG0 0x10600
+#define ECC_MODE_MASK 7U
+#define ECC_MODE_INLINE 4U
 #define MR_START (1U << 31)
 #define MR_DONE_CLEAR (1U << 24)
 #define MR_RANK_MASK (15U << 4)
@@ -95,6 +98,7 @@ uint64_t eic7700_dram_size(void)
 {
 	static uint64_t size;
 	uint32_t clock;
+	uint32_t ecc0, ecc1;
 	uint64_t channel0, channel1;
 
 	if (size)
@@ -103,10 +107,17 @@ uint64_t eic7700_dram_size(void)
 	write32((void *)(EIC7700_SYSCRG + DDR_CONFIG_CLOCK), clock | DDR_CONFIG_ENABLE);
 	channel0 = channel_size(EIC7700_DDRC0);
 	channel1 = channel_size(EIC7700_DDRC1);
+	ecc0 = read32((void *)(EIC7700_DDRC0 + ECCCFG0)) & ECC_MODE_MASK;
+	ecc1 = read32((void *)(EIC7700_DDRC1 + ECCCFG0)) & ECC_MODE_MASK;
 	write32((void *)(EIC7700_SYSCRG + DDR_CONFIG_CLOCK), clock);
 	/* SCPU training configures the two channels for symmetric interleave. */
 	if (channel0 != channel1 || !channel0 || channel0 > 16ULL * GiB)
 		die("Unsupported DDR channel configuration");
+	if (ecc0 != ecc1 || (ecc0 && ecc0 != ECC_MODE_INLINE))
+		die("Unsupported DDR ECC configuration");
 	size = channel0 + channel1;
+	/* Inline ECC stores check bits in the highest eighth of physical DDR. */
+	if (ecc0 == ECC_MODE_INLINE)
+		size -= size / 8;
 	return size;
 }
