@@ -5,9 +5,11 @@
 #include <cbmem.h>
 #include <commonlib/device_tree.h>
 #include <console/console.h>
+#include <device/mmio.h>
 #include <mcall.h>
 #include <soc/addressmap.h>
 #include <soc/sdram.h>
+#include <soc/usb_boot.h>
 
 static int fixup_memory(struct device_tree_fixup *fixup, struct device_tree *tree)
 {
@@ -42,3 +44,26 @@ static void prepare_fdt(void *unused)
 }
 
 BOOT_STATE_INIT_ENTRY(BS_WRITE_TABLES, BS_ON_EXIT, prepare_fdt, NULL);
+
+#define BOOT_SEL_STAT  0x33c
+#define BOOT_MEDIA_MASK  0x3
+#define BOOT_MEDIA_USB   0x3
+
+bool eic7700_usb_boot(void)
+{
+	return (read32((void *)(EIC7700_SYSCRG + BOOT_SEL_STAT)) & BOOT_MEDIA_MASK) ==
+		BOOT_MEDIA_USB;
+}
+
+int eic7700_set_boot_usb_role(struct device_tree *tree)
+{
+	struct device_tree_node *usb0;
+
+	if (!eic7700_usb_boot())
+		return 0;
+	usb0 = dt_find_node_by_path(tree, "/soc/usb@50480000", NULL, NULL, 0);
+	if (!usb0)
+		return -1;
+	dt_add_string_prop(usb0, "dr_mode", "peripheral");
+	return 0;
+}
