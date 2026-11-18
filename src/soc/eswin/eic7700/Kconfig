@@ -45,7 +45,7 @@ config OPENSBI_PLATFORM
 	default "generic"
 
 config OPENSBI_TEXT_START
-	default 0x80000000
+	default 0x80800000
 
 config RISCV_OPENSBI
 	default y

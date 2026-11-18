@@ -11,6 +11,6 @@
 #define EIC7700_DDRC1       0x52380000
 #define EIC7700_DRAM        0x80000000
 /* BootROM loads the complete MCPU image here after SCPU DDR training. */
-#define EIC7700_ROM_BUFFER  0x90000000
+#define EIC7700_ROM_BUFFER  EIC7700_DRAM
 
 #endif
