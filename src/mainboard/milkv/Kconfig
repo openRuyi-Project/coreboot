@@ -1,0 +1,15 @@
+if VENDOR_MILKV
+
+choice
+	prompt "Mainboard model"
+
+source "src/mainboard/milkv/*/Kconfig.name"
+
+endchoice
+
+source "src/mainboard/milkv/*/Kconfig"
+
+config MAINBOARD_VENDOR
+	default "Milk-V"
+
+endif
