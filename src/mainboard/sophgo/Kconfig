@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0-only
+if VENDOR_SOPHGO
+
+choice
+	prompt "Mainboard model"
+
+source "src/mainboard/sophgo/*/Kconfig.name"
+
+endchoice
+
+source "src/mainboard/sophgo/*/Kconfig"
+
+config MAINBOARD_VENDOR
+	default "SOPHGO"
+
+endif

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# The SCP loads this complete image into DRAM as zsbl.bin.
+FLASH 0x800000 {
+	BOOTBLOCK@0x0 0x20000
+	FMAP@0x20000 0x1000
+	COREBOOT(CBFS)@0x21000 0x7df000
+}

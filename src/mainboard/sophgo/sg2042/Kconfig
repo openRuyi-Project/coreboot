@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+if BOARD_SOPHGO_SG2042
+
+config BOARD_SPECIFIC_OPTIONS
+	def_bool y
+	select SOC_SOPHGO_SG2042
+	select BOARD_ROMSIZE_KB_8192
+	select MISSING_BOARD_RESET
+	select FLATTENED_DEVICE_TREE
+
+config MAINBOARD_DIR
+	default "sophgo/sg2042"
+
+config MAINBOARD_PART_NUMBER
+	default "SG2042"
+
+config FMDFILE
+	default "src/mainboard/sophgo/sg2042/board.fmd"
+
+config HEAP_SIZE
+	default 0x80000
+
+endif

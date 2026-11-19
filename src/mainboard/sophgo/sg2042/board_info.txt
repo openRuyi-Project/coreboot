@@ -1,0 +1,3 @@
+Category: sbc
+Board URL: https://github.com/sophgo/sophgo-doc/tree/main/SG2042
+ROM protocol: SPI
