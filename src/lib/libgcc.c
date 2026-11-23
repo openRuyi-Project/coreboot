@@ -2,20 +2,8 @@
 
 #include <types.h>
 
-/*
- * Provide platform-independent backend implementation for __builtin_clz() in
- * <lib.h> in case GCC does not have an assembly version for this arch.
- */
-
-/*
- * FIXME
- * work around lack of --gc-sections on x86
- * defined in rv32 libgcc.a
- */
-
-#if !ENV_X86 && !ENV_RISCV
-int __clzsi2(u32 a);
-int __clzsi2(u32 a)
+#if !ENV_X86 /* Work around the lack of --gc-sections on x86. */
+static int clz32(u32 a)
 {
 	static const u8 four_bit_table[] = {
 		[0x0] = 4, [0x1] = 3, [0x2] = 2, [0x3] = 2,
@@ -45,6 +33,14 @@ int __clzsi2(u32 a)
 #endif
 
 #if ENV_RISCV
+int __clzdi2(u64 a);
+int __clzdi2(u64 a)
+{
+	u32 high = a >> 32;
+
+	return high ? clz32(high) : 32 + clz32((u32)a);
+}
+
 u32 __bswapsi2(u32 value);
 u32 __bswapsi2(u32 value)
 {
@@ -56,5 +52,11 @@ u64 __bswapdi2(u64 value);
 u64 __bswapdi2(u64 value)
 {
 	return ((u64)__bswapsi2((u32)value) << 32) | __bswapsi2((u32)(value >> 32));
+}
+#elif !ENV_X86 /* RV32 libgcc already provides __clzsi2. */
+int __clzsi2(u32 a);
+int __clzsi2(u32 a)
+{
+	return clz32(a);
 }
 #endif
