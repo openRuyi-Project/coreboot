@@ -43,3 +43,18 @@ int __clzsi2(u32 a)
 	return r + four_bit_table[a >> 28];
 }
 #endif
+
+#if ENV_RISCV
+u32 __bswapsi2(u32 value);
+u32 __bswapsi2(u32 value)
+{
+	value = ((value >> 8) & 0x00ff00ffU) | ((value & 0x00ff00ffU) << 8);
+	return (value >> 16) | (value << 16);
+}
+
+u64 __bswapdi2(u64 value);
+u64 __bswapdi2(u64 value)
+{
+	return ((u64)__bswapsi2((u32)value) << 32) | __bswapsi2((u32)(value >> 32));
+}
+#endif

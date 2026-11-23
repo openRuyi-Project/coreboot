@@ -56,6 +56,7 @@ all-y += smp.c
 all-y += misc.c
 all-$(CONFIG_ARCH_RISCV_PMP) += pmp.c
 all-y += \
+	$(top)/src/lib/libgcc.c \
 	$(top)/src/lib/memchr.c \
 	$(top)/src/lib/memcmp.c \
 	$(top)/src/lib/memcpy.c \
