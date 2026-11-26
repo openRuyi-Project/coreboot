@@ -4,6 +4,7 @@
 #include <console/console.h>
 #include <device/mmio.h>
 #include <soc/addressmap.h>
+#include <symbols.h>
 
 /* SYSCRG lsp_clk_en0: UART0 APB clock. */
 #define LSP_CLOCK_ENABLE 0x200
@@ -16,6 +17,31 @@
 #define CCACHE_WAY_ENABLE 0x08
 #define CCACHE_WAYS_SHIFT 8
 #define CCACHE_WAYS_MASK 0xff
+#define MCPU_BOOT_ADDRESS_HI 0x31c
+#define MCPU_BOOT_ADDRESS_LO 0x320
+#define MCPU_BOOT_ADDRESS_STRIDE 8
+#define MCPU_RESET_CONTROL 0x44c
+#define MCPU_CORE_RESET_N 0xf
+#define MCPU_BUS_RESET_N (1U << 4)
+#define MCPU_DEBUG_RESET_N (1U << 5)
+
+static void start_die1_harts(void)
+{
+	uintptr_t crg = EIC7700_SYSCRG + EIC770X_DIE_MMIO_STRIDE;
+	uint64_t entry = (uintptr_t)_bootblock;
+
+	/* BootROM starts the boot cluster. Point the other four harts at
+	 * the same bootblock before allowing them to leave reset.
+	 */
+	for (unsigned int core = 0; core < 4; core++) {
+		uintptr_t vector = crg + core * MCPU_BOOT_ADDRESS_STRIDE;
+		write32((void *)(vector + MCPU_BOOT_ADDRESS_HI), entry >> 32);
+		write32((void *)(vector + MCPU_BOOT_ADDRESS_LO), (uint32_t)entry);
+	}
+	asm volatile("fence iorw, iorw" ::: "memory");
+	setbits32((void *)(crg + MCPU_RESET_CONTROL),
+		  MCPU_CORE_RESET_N | MCPU_BUS_RESET_N | MCPU_DEBUG_RESET_N);
+}
 
 void bootblock_soc_early_init(void)
 {
@@ -28,19 +54,28 @@ void bootblock_soc_early_init(void)
 		  AON_I2C0_IRQ_LPCPU | AON_I2C1_IRQ_LPCPU | AON_GPIO_IRQ_LPCPU);
 }
 
-void bootblock_soc_init(void)
+static void enable_cache(uintptr_t base)
 {
-	unsigned int ways = (read32((void *)(EIC7700_CCACHE + CCACHE_CONFIG)) >>
+	unsigned int ways = (read32((void *)(base + CCACHE_CONFIG)) >>
 			     CCACHE_WAYS_SHIFT) & CCACHE_WAYS_MASK;
 
 	if (!ways)
-		die("EIC7700: invalid L3 cache configuration");
+		die("Invalid EIC770x L3 cache configuration");
 
 	/*
 	 * BootROM releases the harts into DRAM after DDR training. The bootblock
 	 * and every hart's stack are in DRAM, so none uses the L3 LIM backing.
 	 */
-	write32((void *)(EIC7700_CCACHE + CCACHE_WAY_ENABLE), ways - 1);
+	write32((void *)(base + CCACHE_WAY_ENABLE), ways - 1);
 	asm volatile("fence rw, rw" ::: "memory");
-	printk(BIOS_DEBUG, "EIC7700 L3 cache: %u ways enabled\n", ways);
+	printk(BIOS_DEBUG, "L3 cache at 0x%lx: %u ways enabled\n", base, ways);
+}
+
+void bootblock_soc_init(void)
+{
+	if (CONFIG(SOC_ESWIN_EIC7702))
+		start_die1_harts();
+
+	/* Configure only the boot hart's local L3 at handoff. */
+	enable_cache(EIC7700_CCACHE);
 }
