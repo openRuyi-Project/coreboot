@@ -6,7 +6,11 @@
 
 static void read_resources(struct device *dev)
 {
-	ram_from_to(dev, 0, EIC7700_DRAM, EIC7700_DRAM + eic7700_dram_size());
+	struct eic770x_bank banks[4];
+	unsigned int count = eic770x_memory_map(banks);
+
+	for (unsigned int i = 0; i < count; i++)
+		ram_from_to(dev, i, banks[i].base, banks[i].base + banks[i].size);
 }
 
 static struct device_operations cpu_ops = {

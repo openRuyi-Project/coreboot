@@ -15,6 +15,10 @@ config SOC_ESWIN_EIC7700
 	select RISCV_USE_ARCH_TIMER
 	select RISCV_HAS_OPENSBI
 
+config SOC_ESWIN_EIC7702
+	bool
+	select SOC_ESWIN_EIC7700
+
 if SOC_ESWIN_EIC7700
 
 config SEPARATE_ROMSTAGE
@@ -33,6 +37,7 @@ config RISCV_CODEMODEL
 	default "medany"
 
 config MAX_CPUS
+	default 8 if SOC_ESWIN_EIC7702
 	default 4
 
 config RISCV_WORKING_HARTID

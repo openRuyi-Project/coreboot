@@ -94,22 +94,27 @@ static uint64_t channel_size(uintptr_t base)
 	return size;
 }
 
-uint64_t eic7700_dram_size(void)
+uint64_t eic7700_dram_size(unsigned int die_id)
 {
-	static uint64_t size;
+	static uint64_t sizes[EIC770X_DIES];
+	uintptr_t offset = die_id * EIC770X_DIE_MMIO_STRIDE;
+	void *cfg_clk = (void *)(EIC7700_SYSCRG + offset + DDR_CONFIG_CLOCK);
+	uint64_t size;
 	uint32_t clock;
 	uint32_t ecc0, ecc1;
 	uint64_t channel0, channel1;
 
-	if (size)
-		return size;
-	clock = read32((void *)(EIC7700_SYSCRG + DDR_CONFIG_CLOCK));
-	write32((void *)(EIC7700_SYSCRG + DDR_CONFIG_CLOCK), clock | DDR_CONFIG_ENABLE);
-	channel0 = channel_size(EIC7700_DDRC0);
-	channel1 = channel_size(EIC7700_DDRC1);
-	ecc0 = read32((void *)(EIC7700_DDRC0 + ECCCFG0)) & ECC_MODE_MASK;
-	ecc1 = read32((void *)(EIC7700_DDRC1 + ECCCFG0)) & ECC_MODE_MASK;
-	write32((void *)(EIC7700_SYSCRG + DDR_CONFIG_CLOCK), clock);
+	if (die_id >= EIC770X_DIES)
+		die("Invalid DDR die index");
+	if (sizes[die_id])
+		return sizes[die_id];
+	clock = read32(cfg_clk);
+	write32(cfg_clk, clock | DDR_CONFIG_ENABLE);
+	channel0 = channel_size(EIC7700_DDRC0 + offset);
+	channel1 = channel_size(EIC7700_DDRC1 + offset);
+	ecc0 = read32((void *)(EIC7700_DDRC0 + offset + ECCCFG0)) & ECC_MODE_MASK;
+	ecc1 = read32((void *)(EIC7700_DDRC1 + offset + ECCCFG0)) & ECC_MODE_MASK;
+	write32(cfg_clk, clock);
 	/* SCPU training configures the two channels for symmetric interleave. */
 	if (channel0 != channel1 || !channel0 || channel0 > 16ULL * GiB)
 		die("Unsupported DDR channel configuration");
@@ -119,5 +124,24 @@ uint64_t eic7700_dram_size(void)
 	/* Inline ECC stores check bits in the highest eighth of physical DDR. */
 	if (ecc0 == ECC_MODE_INLINE)
 		size -= size / 8;
+	sizes[die_id] = size;
 	return size;
+}
+
+unsigned int eic770x_memory_map(struct eic770x_bank banks[4])
+{
+	uint64_t size = eic7700_dram_size(0);
+
+	banks[0] = (struct eic770x_bank){ EIC7700_DRAM, size };
+	if (!CONFIG(SOC_ESWIN_EIC7702))
+		return 1;
+	if (size != eic7700_dram_size(1) || size <= EIC7702_DIRECT_SIZE)
+		die("EIC7702 interleave requires symmetric usable DDR");
+
+	banks[0].size = EIC7702_DIRECT_SIZE;
+	banks[1] = (struct eic770x_bank){ EIC7702_DIE1_DRAM, EIC7702_DIRECT_SIZE };
+	size -= EIC7702_DIRECT_SIZE;
+	banks[2] = (struct eic770x_bank){ EIC7702_STRIPED_BASE + 2 * EIC7702_DIRECT_SIZE, size };
+	banks[3] = (struct eic770x_bank){ banks[2].base + size, size };
+	return 4;
 }

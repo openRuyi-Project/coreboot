@@ -5,11 +5,13 @@
 #include <console/console.h>
 #include <program_loading.h>
 #include <romstage_common.h>
+#include <soc/addressmap.h>
 #include <soc/sdram.h>
 
 void __noreturn romstage_main(void)
 {
-	printk(BIOS_INFO, "SCPU initialized %llu MiB DRAM\n", eic7700_dram_size() / MiB);
+	for (unsigned int i = 0; i < EIC770X_DIES; i++)
+		printk(BIOS_INFO, "Die %u: %llu MiB DRAM\n", i, eic7700_dram_size(i) / MiB);
 	cbmem_initialize_empty();
 	run_ramstage();
 }
