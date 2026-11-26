@@ -1,0 +1,3 @@
+Category: desktop
+Board URL: https://github.com/eswincomputing/ebc7702-dev-board-ubuntu
+ROM protocol: SPI

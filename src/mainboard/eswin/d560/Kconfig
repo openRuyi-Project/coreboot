@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+if BOARD_ESWIN_D560
+
+config BOARD_SPECIFIC_OPTIONS
+	def_bool y
+	select SOC_ESWIN_EIC7702
+	select BOARD_ROMSIZE_KB_4096
+	select MISSING_BOARD_RESET
+	select FLATTENED_DEVICE_TREE
+
+config MAINBOARD_DIR
+	default "eswin/d560"
+
+config MAINBOARD_PART_NUMBER
+	default "D560"
+
+config FMDFILE
+	default "src/mainboard/eswin/d560/board.fmd"
+
+endif
